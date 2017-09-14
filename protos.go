@@ -22,7 +22,7 @@ type DNSResource struct {
 // Resource represents a generalised Protos resource
 type Resource struct {
 	Type   string      `json:"type"`
-	Record DNSResource `json:"value"`
+	Record interface{} `json:"value"`
 	Status string      `json:"status"`
 	ID     string      `json:"id"`
 }
@@ -31,6 +31,16 @@ type Resource struct {
 type Protos struct {
 	URL        string
 	HTTPclient *http.Client
+}
+
+func newDNSResource(m interface{}) DNSResource {
+	v := m.(map[string]interface{})
+	return DNSResource{
+		Host:  v["host"].(string),
+		Value: v["value"].(string),
+		Type:  v["type"].(string),
+		TTL:   int(v["ttl"].(float64)),
+	}
 }
 
 // SetResourceStatus takes a resource ID and sets a new status
@@ -64,7 +74,7 @@ func (p Protos) SetResourceStatus(resourceID string, rstatus string) error {
 }
 
 // SetStatusBatch takes a list of Resource and applies the same status to all of them
-func (p Protos) SetStatusBatch(resources map[string]Resource, rstatus string) error {
+func (p Protos) SetStatusBatch(resources map[string]*Resource, rstatus string) error {
 	for _, resource := range resources {
 		err := p.SetResourceStatus(resource.ID, rstatus)
 		if err != nil {
@@ -75,26 +85,34 @@ func (p Protos) SetStatusBatch(resources map[string]Resource, rstatus string) er
 }
 
 // GetResources returns the resources of a specific provider
-func (p Protos) GetResources() (map[string]Resource, error) {
+func (p Protos) GetResources() (map[string]*Resource, error) {
 
 	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/resource/provider", nil)
-	resources := make(map[string]Resource)
+	resources := make(map[string]*Resource)
 
 	resp, err := p.HTTPclient.Do(resourcesReq)
 	if err != nil {
-		return map[string]Resource{}, err
+		return map[string]*Resource{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		b, _ := ioutil.ReadAll(resp.Body)
-		return map[string]Resource{}, errors.New(string(b))
+		return map[string]*Resource{}, errors.New(string(b))
 	}
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&resources)
 	if err != nil {
-		return map[string]Resource{}, err
+		return map[string]*Resource{}, err
+	}
+
+	for _, resource := range resources {
+		if resource.Type == "dns" {
+			resource.Record = newDNSResource(resource.Record)
+		} else {
+			return map[string]*Resource{}, errors.New("Unknown resource type: " + resource.Type + " for resource " + resource.ID)
+		}
 	}
 
 	return resources, nil
