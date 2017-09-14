@@ -146,6 +146,34 @@ func (p Protos) RegisterProvider(rtype string) error {
 	return nil
 }
 
+// DeregisterProvider allows an app to register as a provider for a specific resource type
+func (p Protos) DeregisterProvider(rtype string) error {
+	payloadJSON, err := json.Marshal(&struct {
+		Type string `json:"type"`
+	}{
+		Type: rtype,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("DELETE", p.URL+"internal/provider", bytes.NewBuffer(payloadJSON))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := p.HTTPclient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		b, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(b))
+	}
+
+	return nil
+}
+
 // NewClient returns a client that can be used to interact with Protos
 func NewClient(url string) Protos {
 	return Protos{
