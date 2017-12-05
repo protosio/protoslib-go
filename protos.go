@@ -30,6 +30,7 @@ type Resource struct {
 // Protos client struct
 type Protos struct {
 	URL        string
+	AppID      string
 	HTTPclient *http.Client
 }
 
@@ -41,6 +42,28 @@ func newDNSResource(m interface{}) DNSResource {
 		Type:  v["type"].(string),
 		TTL:   int(v["ttl"].(float64)),
 	}
+}
+
+// makeRequest prepares and sends a request to the protos backend
+func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
+	req.Header.Set("Appid", p.AppID)
+
+	resp, err := p.HTTPclient.Do(req)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer resp.Body.Close()
+
+	payload, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if resp.StatusCode != 200 {
+		return []byte{}, errors.New(string(payload))
+	}
+
+	return payload, nil
 }
 
 // SetResourceStatus takes a resource ID and sets a new status
@@ -59,15 +82,9 @@ func (p Protos) SetResourceStatus(resourceID string, rstatus string) error {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(statusJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := p.HTTPclient.Do(req)
+	_, err = p.makeRequest(req)
 	if err != nil {
 		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		b, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(string(b))
 	}
 
 	return nil
@@ -90,19 +107,12 @@ func (p Protos) GetResources() (map[string]*Resource, error) {
 	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/resource/provider", nil)
 	resources := make(map[string]*Resource)
 
-	resp, err := p.HTTPclient.Do(resourcesReq)
+	payload, err := p.makeRequest(resourcesReq)
 	if err != nil {
 		return map[string]*Resource{}, err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		b, _ := ioutil.ReadAll(resp.Body)
-		return map[string]*Resource{}, errors.New(string(b))
-	}
-
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&resources)
+	err = json.Unmarshal(payload, &resources)
 	if err != nil {
 		return map[string]*Resource{}, err
 	}
@@ -132,15 +142,9 @@ func (p Protos) RegisterProvider(rtype string) error {
 	req, err := http.NewRequest("POST", p.URL+"internal/provider", bytes.NewBuffer(payloadJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := p.HTTPclient.Do(req)
+	_, err = p.makeRequest(req)
 	if err != nil {
 		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		b, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(string(b))
 	}
 
 	return nil
@@ -160,24 +164,19 @@ func (p Protos) DeregisterProvider(rtype string) error {
 	req, err := http.NewRequest("DELETE", p.URL+"internal/provider", bytes.NewBuffer(payloadJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := p.HTTPclient.Do(req)
+	_, err = p.makeRequest(req)
 	if err != nil {
 		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		b, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(string(b))
 	}
 
 	return nil
 }
 
 // NewClient returns a client that can be used to interact with Protos
-func NewClient(url string) Protos {
+func NewClient(url string, appid string) Protos {
 	return Protos{
 		URL:        url,
+		AppID:      appid,
 		HTTPclient: &http.Client{},
 	}
 }
