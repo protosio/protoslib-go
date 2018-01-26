@@ -66,6 +66,24 @@ func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
 	return payload, nil
 }
 
+// GetDomain retrieves the domain name of the Protos instance
+func (p Protos) GetDomain() (string, error) {
+	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/info/domain", nil)
+	domain := struct{ Domain string }{Domain: ""}
+
+	payload, err := p.makeRequest(resourcesReq)
+	if err != nil {
+		return "", err
+	}
+
+	err = json.Unmarshal(payload, &domain)
+	if err != nil {
+		return "", err
+	}
+
+	return domain.Domain, nil
+}
+
 // SetResourceStatus takes a resource ID and sets a new status
 func (p Protos) SetResourceStatus(resourceID string, rstatus string) error {
 
