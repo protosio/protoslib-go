@@ -130,16 +130,7 @@ func (p Protos) GetResources() (map[string]*Resource, error) {
 
 // RegisterProvider allows an app to register as a provider for a specific resource type
 func (p Protos) RegisterProvider(rtype string) error {
-	payloadJSON, err := json.Marshal(&struct {
-		Type string `json:"type"`
-	}{
-		Type: rtype,
-	})
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", p.URL+"internal/provider", bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequest("POST", p.URL+"internal/provider/"+rtype, bytes.NewBuffer([]byte{}))
 	req.Header.Set("Content-Type", "application/json")
 
 	_, err = p.makeRequest(req)
@@ -152,16 +143,7 @@ func (p Protos) RegisterProvider(rtype string) error {
 
 // DeregisterProvider allows an app to register as a provider for a specific resource type
 func (p Protos) DeregisterProvider(rtype string) error {
-	payloadJSON, err := json.Marshal(&struct {
-		Type string `json:"type"`
-	}{
-		Type: rtype,
-	})
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("DELETE", p.URL+"internal/provider", bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequest("DELETE", p.URL+"internal/provider/"+rtype, bytes.NewBuffer([]byte{}))
 	req.Header.Set("Content-Type", "application/json")
 
 	_, err = p.makeRequest(req)
