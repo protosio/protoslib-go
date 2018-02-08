@@ -69,6 +69,9 @@ func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
 // GetDomain retrieves the domain name of the Protos instance
 func (p Protos) GetDomain() (string, error) {
 	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/info/domain", nil)
+	if err != nil {
+		return "", err
+	}
 	domain := struct{ Domain string }{Domain: ""}
 
 	payload, err := p.makeRequest(resourcesReq)
@@ -98,6 +101,9 @@ func (p Protos) SetResourceStatus(resourceID string, rstatus string) error {
 
 	url := p.URL + "internal/resource/" + resourceID
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(statusJSON))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	_, err = p.makeRequest(req)
@@ -123,6 +129,9 @@ func (p Protos) SetStatusBatch(resources map[string]*Resource, rstatus string) e
 func (p Protos) GetResources() (map[string]*Resource, error) {
 
 	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/resource/provider", nil)
+	if err != nil {
+		return map[string]*Resource{}, err
+	}
 	resources := make(map[string]*Resource)
 
 	payload, err := p.makeRequest(resourcesReq)
@@ -149,6 +158,9 @@ func (p Protos) GetResources() (map[string]*Resource, error) {
 // RegisterProvider allows an app to register as a provider for a specific resource type
 func (p Protos) RegisterProvider(rtype string) error {
 	req, err := http.NewRequest("POST", p.URL+"internal/provider/"+rtype, bytes.NewBuffer([]byte{}))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	_, err = p.makeRequest(req)
@@ -162,6 +174,9 @@ func (p Protos) RegisterProvider(rtype string) error {
 // DeregisterProvider allows an app to register as a provider for a specific resource type
 func (p Protos) DeregisterProvider(rtype string) error {
 	req, err := http.NewRequest("DELETE", p.URL+"internal/provider/"+rtype, bytes.NewBuffer([]byte{}))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	_, err = p.makeRequest(req)
