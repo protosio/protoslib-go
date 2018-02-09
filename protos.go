@@ -7,25 +7,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	resource "github.com/nustiueudinastea/protos/resource"
 )
 
 var protosURL string
-
-// DNSResource is a Protos resource for DNS
-type DNSResource struct {
-	Host  string `json:"host"`
-	Value string `json:"value" hash:"-"`
-	Type  string `json:"type"`
-	TTL   int    `json:"ttl" hash:"-"`
-}
-
-// Resource represents a generalised Protos resource
-type Resource struct {
-	Type   string      `json:"type"`
-	Record interface{} `json:"value"`
-	Status string      `json:"status"`
-	ID     string      `json:"id"`
-}
 
 // Protos client struct
 type Protos struct {
@@ -34,14 +20,24 @@ type Protos struct {
 	HTTPclient *http.Client
 }
 
-func newDNSResource(m interface{}) DNSResource {
-	v := m.(map[string]interface{})
-	return DNSResource{
-		Host:  v["host"].(string),
-		Value: v["value"].(string),
-		Type:  v["type"].(string),
-		TTL:   int(v["ttl"].(float64)),
+// Resources is a dictionary that stores resources, with the key being the resource id
+type Resources map[string]*resource.Resource
+
+// UnmarshalJSON is a custom json decode for resources
+func (rscs Resources) UnmarshalJSON(b []byte) error {
+	var resources map[string][]byte
+	err := json.Unmarshal(b, &resources)
+	if err != nil {
+		return err
 	}
+	for key, value := range resources {
+		rsc, err := resource.GetResourceFromJSON(value)
+		if err != nil {
+			return err
+		}
+		rscs[key] = rsc
+	}
+	return nil
 }
 
 // makeRequest prepares and sends a request to the protos backend
@@ -115,7 +111,7 @@ func (p Protos) SetResourceStatus(resourceID string, rstatus string) error {
 }
 
 // SetStatusBatch takes a list of Resource and applies the same status to all of them
-func (p Protos) SetStatusBatch(resources map[string]*Resource, rstatus string) error {
+func (p Protos) SetStatusBatch(resources map[string]*resource.Resource, rstatus string) error {
 	for _, resource := range resources {
 		err := p.SetResourceStatus(resource.ID, rstatus)
 		if err != nil {
@@ -126,30 +122,23 @@ func (p Protos) SetStatusBatch(resources map[string]*Resource, rstatus string) e
 }
 
 // GetResources returns the resources of a specific provider
-func (p Protos) GetResources() (map[string]*Resource, error) {
+func (p Protos) GetResources() (map[string]*resource.Resource, error) {
 
+	resources := Resources{}
 	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/resource/provider", nil)
 	if err != nil {
-		return map[string]*Resource{}, err
+		return resources, err
+
 	}
-	resources := make(map[string]*Resource)
 
 	payload, err := p.makeRequest(resourcesReq)
 	if err != nil {
-		return map[string]*Resource{}, err
+		return resources, err
 	}
 
 	err = json.Unmarshal(payload, &resources)
 	if err != nil {
-		return map[string]*Resource{}, err
-	}
-
-	for _, resource := range resources {
-		if resource.Type == "dns" {
-			resource.Record = newDNSResource(resource.Record)
-		} else {
-			return map[string]*Resource{}, errors.New("Unknown resource type: " + resource.Type + " for resource " + resource.ID)
-		}
+		return resources, err
 	}
 
 	return resources, nil
