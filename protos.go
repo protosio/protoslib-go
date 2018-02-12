@@ -25,17 +25,18 @@ type Resources map[string]*resource.Resource
 
 // UnmarshalJSON is a custom json decode for resources
 func (rscs Resources) UnmarshalJSON(b []byte) error {
-	var resources map[string][]byte
+	var resources map[string]json.RawMessage
 	err := json.Unmarshal(b, &resources)
 	if err != nil {
 		return err
 	}
 	for key, value := range resources {
-		rsc, err := resource.GetResourceFromJSON(value)
+		rsc := resource.Resource{}
+		err := json.Unmarshal(value, &rsc)
 		if err != nil {
 			return err
 		}
-		rscs[key] = rsc
+		rscs[key] = &rsc
 	}
 	return nil
 }
@@ -128,7 +129,6 @@ func (p Protos) GetResources() (map[string]*resource.Resource, error) {
 	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/resource/provider", nil)
 	if err != nil {
 		return resources, err
-
 	}
 
 	payload, err := p.makeRequest(resourcesReq)
