@@ -144,6 +144,47 @@ func (p Protos) GetResources() (map[string]*resource.Resource, error) {
 	return resources, nil
 }
 
+// CreateResource creates a Protos resource
+func (p Protos) CreateResource(rsc resource.Resource) (*resource.Resource, error) {
+	rscJSON, err := json.Marshal(rsc)
+	if err != nil {
+		return nil, err
+	}
+
+	url := p.URL + "internal/resource"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rscJSON))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := p.makeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(res, &rsc)
+	if err != nil {
+		return nil, err
+	}
+	return &rsc, nil
+}
+
+// DeleteResource deletes a resource based on the provided id
+func (p Protos) DeleteResource(resourceID string) error {
+	url := p.URL + "internal/resource/" + resourceID
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = p.makeRequest(req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // RegisterProvider allows an app to register as a provider for a specific resource type
 func (p Protos) RegisterProvider(rtype string) error {
 	req, err := http.NewRequest("POST", p.URL+"internal/provider/"+rtype, bytes.NewBuffer([]byte{}))
