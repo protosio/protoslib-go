@@ -84,6 +84,28 @@ func (p Protos) GetDomain() (string, error) {
 	return domain.Domain, nil
 }
 
+// UpdateResourceValue updates a resource's value based on the ID and new value provided
+func (p Protos) UpdateResourceValue(resourceID string, newValue resource.Type) error {
+	payloadJSON, err := json.Marshal(newValue)
+	if err != nil {
+		return err
+	}
+
+	url := p.URL + "internal/resource/" + resourceID
+	req, err := http.NewRequest("UPDATE", url, bytes.NewBuffer(payloadJSON))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err = p.makeRequest(req)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // SetResourceStatus takes a resource ID and sets a new status
 func (p Protos) SetResourceStatus(resourceID string, rstatus string) error {
 
