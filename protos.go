@@ -61,27 +61,6 @@ func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
 	return payload, nil
 }
 
-// GetDomain retrieves the domain name of the Protos instance
-func (p Protos) GetDomain() (string, error) {
-	resourcesReq, err := http.NewRequest("GET", p.URL+"internal/info/domain", nil)
-	if err != nil {
-		return "", err
-	}
-	domain := struct{ Domain string }{Domain: ""}
-
-	payload, err := p.makeRequest(resourcesReq)
-	if err != nil {
-		return "", err
-	}
-
-	err = json.Unmarshal(payload, &domain)
-	if err != nil {
-		return "", err
-	}
-
-	return domain.Domain, nil
-}
-
 // NewClient returns a client that can be used to interact with Protos
 func NewClient(url string, appid string) Protos {
 	return Protos{
