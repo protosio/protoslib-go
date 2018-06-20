@@ -64,7 +64,7 @@ func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
 // NewClient returns a client that can be used to interact with Protos
 func NewClient(url string, appid string) Protos {
 	return Protos{
-		URL:        url,
+		URL:        url + "/api/v1/",
 		AppID:      appid,
 		HTTPclient: &http.Client{},
 	}
