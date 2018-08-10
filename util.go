@@ -29,7 +29,7 @@ func GetAppID() (string, error) {
 
 // GetDomain retrieves the domain name of the Protos instance
 func (p Protos) GetDomain() (string, error) {
-	req, err := http.NewRequest("GET", p.URL+"internal/info/domain", nil)
+	req, err := http.NewRequest("GET", p.URL+"info/domain", nil)
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +51,7 @@ func (p Protos) GetDomain() (string, error) {
 // GetAppInfo retrieves information about the requesting application, from the internal Protos API
 func (p Protos) GetAppInfo() (AppInfo, error) {
 	appInfo := AppInfo{}
-	req, err := http.NewRequest("GET", p.URL+"internal/info/app", nil)
+	req, err := http.NewRequest("GET", p.URL+"info/app", nil)
 	if err != nil {
 		return appInfo, err
 	}

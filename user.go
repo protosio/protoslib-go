@@ -11,7 +11,7 @@ import (
 // AuthUser authenticates a user and returns information about it
 func (p Protos) AuthUser(username string, password string) (auth.UserInfo, error) {
 	userInfo := auth.UserInfo{}
-	url := p.URL + "internal/user/auth"
+	url := p.URL + "user/auth"
 	login := struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
