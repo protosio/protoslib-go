@@ -41,3 +41,24 @@ func (p Protos) AuthUser(username string, password string) (auth.UserInfo, error
 	}
 	return userInfo, nil
 }
+
+// GetAdminUser retrieves the admin user of the Protos instance
+func (p Protos) GetAdminUser() (string, error) {
+	req, err := http.NewRequest("GET", p.URL+"info/adminuser", nil)
+	if err != nil {
+		return "", err
+	}
+	user := struct{ Username string }{}
+
+	payload, err := p.makeRequest(req)
+	if err != nil {
+		return "", err
+	}
+
+	err = json.Unmarshal(payload, &user)
+	if err != nil {
+		return "", err
+	}
+
+	return user.Username, nil
+}

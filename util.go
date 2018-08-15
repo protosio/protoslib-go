@@ -33,7 +33,7 @@ func (p Protos) GetDomain() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	domain := struct{ Domain string }{Domain: ""}
+	domain := struct{ Domain string }{}
 
 	payload, err := p.makeRequest(req)
 	if err != nil {
