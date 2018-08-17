@@ -3,6 +3,7 @@ package protoslib
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -10,6 +11,10 @@ import (
 )
 
 var protosURL string
+
+type httpErr struct {
+	Error string `json:"error"`
+}
 
 // Protos client struct
 type Protos struct {
@@ -55,7 +60,12 @@ func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return []byte{}, errors.New(string(payload))
+		httperr := httpErr{}
+		err := json.Unmarshal(payload, &httperr)
+		if err != nil {
+			return []byte{}, fmt.Errorf("Failed to decode error message from Protos: %s", err.Error())
+		}
+		return []byte{}, errors.New(httperr.Error)
 	}
 
 	return payload, nil
