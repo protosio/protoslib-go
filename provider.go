@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	resource "github.com/nustiueudinastea/protos/resource"
+	resource "github.com/protosio/protos/resource"
 )
 
 // RegisterProvider allows an app to register as a provider for a specific resource type

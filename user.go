@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	auth "github.com/nustiueudinastea/protos/auth"
+	auth "github.com/protosio/protos/auth"
 )
 
 // AuthUser authenticates a user and returns information about it

@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	resource "github.com/nustiueudinastea/protos/resource"
+	resource "github.com/protosio/protos/resource"
 )
 
 var protosURL string
