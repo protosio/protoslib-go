@@ -3,7 +3,7 @@ package protoslib
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -48,10 +48,16 @@ func (p Protos) AddEventHandler(msgType string, handler func(interface{})) error
 
 // StartWSLoop opens a websocket connection to Protos and listens for any updates
 func (p Protos) StartWSLoop(interval int64) error {
-	c, _, err := websocket.DefaultDialer.Dial(p.URL+"ws", nil)
+	wsURL := "ws://" + p.URL + "ws"
+	header := http.Header{"Appid": []string{p.AppID}}
+
+	c, response, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
-		log.Fatal("dial:", err)
-		return errors.Wrap(err, "Failed to establish ws connection")
+		errMsg, err := decodeError(response)
+		if err != nil {
+			return errors.Wrap(err, "Failed to establish ws connection")
+		}
+		return fmt.Errorf("Failed to establish ws connection %s", errMsg)
 	}
 	defer c.Close()
 
