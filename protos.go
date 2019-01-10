@@ -26,6 +26,20 @@ type Protos struct {
 // Resources is a dictionary that stores resources, with the key being the resource id
 type Resources map[string]*resource.Resource
 
+func decodeError(resp *http.Response) (string, error) {
+	payload, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	httperr := httpErr{}
+	err = json.Unmarshal(payload, &httperr)
+	if err != nil {
+		return "", fmt.Errorf("Failed to decode error message from Protos: %s", err.Error())
+	}
+	return httperr.Error, nil
+}
+
 // UnmarshalJSON is a custom json decode for resources
 func (rscs Resources) UnmarshalJSON(b []byte) error {
 	var resources map[string]json.RawMessage
