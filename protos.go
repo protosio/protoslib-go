@@ -18,9 +18,11 @@ type httpErr struct {
 
 // Protos client struct
 type Protos struct {
-	URL        string
+	Host       string
+	PathPrefix string
 	AppID      string
 	HTTPclient *http.Client
+	Protocol   string
 }
 
 // Resources is a dictionary that stores resources, with the key being the resource id
@@ -86,10 +88,12 @@ func (p Protos) makeRequest(req *http.Request) ([]byte, error) {
 }
 
 // NewClient returns a client that can be used to interact with Protos
-func NewClient(url string, appid string) Protos {
+func NewClient(host string, appid string) Protos {
 	return Protos{
-		URL:        url + "/api/v1/i/",
+		Host:       host,
+		PathPrefix: "api/v1/i",
 		AppID:      appid,
 		HTTPclient: &http.Client{},
+		Protocol:   "http",
 	}
 }

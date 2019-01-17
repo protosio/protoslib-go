@@ -106,7 +106,7 @@ func wsMessageReader(c *websocket.Conn, messageChan chan []byte, errChan chan er
 
 // StartWSLoop opens a websocket connection to Protos and listens for any updates
 func (p Protos) StartWSLoop(interval int64) error {
-	wsURL := "ws://" + p.URL + "ws"
+	wsURL := "ws://" + p.Host + "/" + p.PathPrefix + "/ws"
 	header := http.Header{"Appid": []string{p.AppID}}
 
 	c, response, err := websocket.DefaultDialer.Dial(wsURL, header)
@@ -132,6 +132,14 @@ func (p Protos) StartWSLoop(interval int64) error {
 	messageChan := make(chan []byte, 1)
 	errChan := make(chan error, 1)
 	go wsMessageReader(c, messageChan, errChan)
+
+	// triggering a timer event in the very beginning so that resources providers can do an initial check
+	// of all the resources
+	err = handleTimer()
+	if err != nil {
+		handleTermination(c)
+		return err
+	}
 
 	for {
 		select {

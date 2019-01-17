@@ -11,7 +11,7 @@ import (
 // AuthUser authenticates a user and returns information about it
 func (p Protos) AuthUser(username string, password string) (auth.UserInfo, error) {
 	userInfo := auth.UserInfo{}
-	url := p.URL + "user/auth"
+	url := p.createURL("user/auth")
 	login := struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -44,7 +44,7 @@ func (p Protos) AuthUser(username string, password string) (auth.UserInfo, error
 
 // GetAdminUser retrieves the admin user of the Protos instance
 func (p Protos) GetAdminUser() (string, error) {
-	req, err := http.NewRequest("GET", p.URL+"info/adminuser", nil)
+	req, err := http.NewRequest("GET", p.createURL("info/adminuser"), nil)
 	if err != nil {
 		return "", err
 	}

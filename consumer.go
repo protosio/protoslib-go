@@ -15,7 +15,7 @@ func (p Protos) CreateResource(rsc resource.Resource) (*resource.Resource, error
 		return nil, err
 	}
 
-	url := p.URL + "resource"
+	url := p.createURL("resource")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rscJSON))
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (p Protos) CreateResource(rsc resource.Resource) (*resource.Resource, error
 
 // GetResource retrieves a resources based on the provided ID
 func (p Protos) GetResource(resourceID string) (*resource.Resource, error) {
-	url := p.URL + "resource/" + resourceID
+	url := p.createURL("resource/" + resourceID)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (p Protos) GetResource(resourceID string) (*resource.Resource, error) {
 
 // DeleteResource deletes a resource based on the provided id
 func (p Protos) DeleteResource(resourceID string) error {
-	url := p.URL + "resource/" + resourceID
+	url := p.createURL("resource/" + resourceID)
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
