@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -13,9 +14,22 @@ import (
 	util "github.com/protosio/protos/util"
 )
 
-var eventHandlers = make(map[string]func(interface{}))
+const (
+	// EventTerminate triggers when the WS connection is closed
+	EventTerminate = "terminate"
+	// EventTimer triggers periodically, depending on the timer settings in the WS event loop
+	EventTimer = "timer"
+	// EventNewMessage triggers whenever there is a new message from the WS connection
+	EventNewMessage = "newmessage"
+)
 
-func processEvent(msg []byte) error {
+var eventHandlers = make(map[string]func(...interface{}))
+
+//
+// Various event handlers
+//
+
+func handleNewMessage(msg []byte) error {
 	wsmsg := util.WSMessage{}
 	err := json.Unmarshal(msg, &wsmsg)
 	if err != nil {
@@ -35,15 +49,59 @@ func processEvent(msg []byte) error {
 	return nil
 }
 
+func handleTimer() error {
+	timerHandler, found := eventHandlers[EventTimer]
+	if found != true {
+		return errors.New("Failed to process timer event. No handler registered")
+	}
+
+	timerHandler()
+	return nil
+}
+
+func handleTermination(c *websocket.Conn) {
+
+	// sending a close message to the other peer. Ignoring any error message in case the connection is already closed
+	c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "terminating"))
+	c.Close()
+
+	// if there is an event handler registered for the termination sequence, call it
+	terminationHandler, found := eventHandlers[EventTerminate]
+	if found == false {
+		return
+	}
+	terminationHandler()
+}
+
+//
+// General methods
+//
+
 // AddEventHandler registers a function that acts as an event handler for a specific msg type
-func (p Protos) AddEventHandler(msgType string, handler func(interface{})) error {
+func (p Protos) AddEventHandler(msgType string, handler func(...interface{})) error {
 	switch msgType {
-	case util.WSMsgTypeUpdate:
-		eventHandlers[util.WSMsgTypeUpdate] = handler
+	case EventNewMessage:
+		eventHandlers[EventNewMessage] = handler
+	case EventTimer:
+		eventHandlers[EventTimer] = handler
+	case EventTerminate:
+		eventHandlers[EventTerminate] = handler
 	default:
 		return fmt.Errorf("Failed to add event handler. Message type %s is not supported", msgType)
 	}
 	return nil
+}
+
+func wsMessageReader(c *websocket.Conn, messageChan chan []byte, errChan chan error) {
+	// read message from Protos and process it
+	for {
+		_, message, err := c.ReadMessage()
+		if err != nil {
+			errChan <- errors.Wrap(err, "Failed to read ws message")
+			return
+		}
+		messageChan <- message
+	}
 }
 
 // StartWSLoop opens a websocket connection to Protos and listens for any updates
@@ -62,34 +120,39 @@ func (p Protos) StartWSLoop(interval int64) error {
 	defer c.Close()
 
 	// listeting for an interrupt from the OS
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// create a ticker that can be used to check the providers' resources once in a while
 	// in case updates are missed for some reasons the provider can still find out about new resources
 	ticker := time.NewTicker(time.Second * time.Duration(interval))
 	defer ticker.Stop()
 
+	// channel used for receiving messages from the message reader routine
+	messageChan := make(chan []byte, 1)
+	errChan := make(chan error, 1)
+	go wsMessageReader(c, messageChan, errChan)
+
 	for {
 		select {
 		case <-ticker.C:
-			return nil
-		case <-interrupt:
+			err = handleTimer()
+			if err != nil {
+				handleTermination(c)
+				return err
+			}
+		case <-interruptChan:
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				return errors.Wrap(err, "Failed to close ws connection")
-			}
+			handleTermination(c)
 			return nil
-		default:
-			// read message from Protos and process it
-			_, message, err := c.ReadMessage()
+		case err := <-errChan:
+			handleTermination(c)
+			return err
+		case msg := <-messageChan:
+			err = handleNewMessage(msg)
 			if err != nil {
-				return errors.Wrap(err, "Failed to read ws message")
-			}
-			err = processEvent(message)
-			if err != nil {
+				handleTermination(c)
 				return errors.Wrap(err, "Failed to process event")
 			}
 		}
