@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	resource "github.com/protosio/protos/resource"
 )
@@ -37,7 +38,7 @@ func decodeError(resp *http.Response) (string, error) {
 	httperr := httpErr{}
 	err = json.Unmarshal(payload, &httperr)
 	if err != nil {
-		return "", fmt.Errorf("Failed to decode error message from Protos: %s", err.Error())
+		return "", fmt.Errorf("Failed to JSON decode the following Protos message: '%s'", strings.TrimSpace(string(payload)))
 	}
 	return httperr.Error, nil
 }
